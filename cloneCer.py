@@ -189,7 +189,7 @@ if 'data' in st.session_state and st.session_state.texts:
     st.header("4️⃣ สร้างไฟล์ทั้งหมด")
     filename_col = st.selectbox("เลือกคอลัมน์ชื่อไฟล์", st.session_state.data.columns)
     
-    if st.button("🚀 ดาวน์โหลด (ZIP)", type="primary"):
+    if st.button("สร้างไฟล์", type="primary"):
         zip_buffer = BytesIO()
         with st.spinner("กำลังปั่นเกียรติบัตร..."):
             with zipfile.ZipFile(zip_buffer, 'w') as zf:
