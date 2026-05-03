@@ -84,7 +84,7 @@ with st.sidebar:
         st.warning("⚠️ แนะนำให้อัปโหลดไฟล์ .ttf เพื่อให้ปรับขนาด/แสดงภาษาไทยได้")
 
     # 3. Data
-    data_file = st.file_uploader("3. รายชื่อ (ไม่เกิน 150 รายชื่อ ไฟล์ Excel/CSV)  ", type=['xlsx', 'xls', 'csv'])
+    data_file = st.file_uploader("3. รายชื่อ (ไฟล์ Excel/CSV)  ", type=['xlsx', 'xls', 'csv'])
     if data_file:
         if data_file.name.endswith('.csv'):
             st.session_state.data = pd.read_csv(data_file)
@@ -147,7 +147,7 @@ with col_form:
         if st.form_submit_button("➕ แทรกข้อความลงเกียรติบัตร"):
             # เช็คว่าผู้ใช้อัปโหลดฟอนต์หรือยัง ถ้ายังให้แจ้งเตือน
             if 'font_bytes' not in st.session_state:
-                st.warning("อย่าลืมอัปโหลดฟอนต์ก่อนนะครับ ไม่งั้นจะปรับขนาดไม่ได้!")
+                st.warning("อัปโหลดฟอนต์เพื่อปรับขนาด(หากไม่ทำจะปรับขนาดไม่ได้)")
             
             st.session_state.texts.append({
                 'type': 'static' if "พิมพ์เอง" in t_type else 'excel',
@@ -177,9 +177,9 @@ if st.session_state.texts:
         row_idx = st.number_input("ดูตัวอย่างแถวที่:", 0, max(0, len(st.session_state.data)-1), 0)
         preview_row = st.session_state.data.iloc[row_idx].to_dict()
     
-    # สร้างรูปพรีวิว (ย่อให้หน้ากว้าง 700px เพื่อไม่ให้ล้นจอ)
+    # สร้างรูปพรีวิว (ย่อให้หน้ากว้าง 650px เพื่อไม่ให้ล้นจอ)
     preview_img = render_certificate(st.session_state.template, st.session_state.texts, preview_row)
-    st.image(preview_img, width=700)
+    st.image(preview_img, width=650)
 else:
     st.info("ตั้งค่าข้อความด้านบนก่อนครับ")
 
@@ -191,7 +191,7 @@ if 'data' in st.session_state and st.session_state.texts:
     
     if st.button("สร้างไฟล์", type="primary"):
         zip_buffer = BytesIO()
-        with st.spinner("กำลังปั่นเกียรติบัตร..."):
+        with st.spinner("กำลังสร้างเกียรติบัตร..."):
             with zipfile.ZipFile(zip_buffer, 'w') as zf:
                 for idx, row in st.session_state.data.iterrows():
                     final_img = render_certificate(st.session_state.template, st.session_state.texts, row.to_dict())
@@ -201,5 +201,5 @@ if 'data' in st.session_state and st.session_state.texts:
                     clean_name = sanitize_filename(row[filename_col])
                     zf.writestr(f"{clean_name}.png", img_io.getvalue())
             
-            st.success("เรียบร้อย!")
+            st.success("สำเร็จ!")
             st.download_button("📥 ดาวน์โหลดไฟล์ ZIP", zip_buffer.getvalue(), "certificates.zip", "application/zip")
