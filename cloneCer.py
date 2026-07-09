@@ -16,6 +16,38 @@ except ImportError:
 # ==========================================
 # 🛠️ HELPER FUNCTIONS
 # ==========================================
+def fix_thai_text(text):
+    """
+    จัดตำแหน่งสระและวรรณยุกต์ภาษาไทยให้ถูกต้อง (แก้ปัญหาสระจม/ลอย)
+    โดยแทนที่ด้วยอักขระพิเศษ (PUA) ที่ฟอนต์ภาษาไทยส่วนใหญ่รองรับ
+    """
+    if not isinstance(text, str):
+        return str(text) if pd.notna(text) else ""
+        
+    # กลุ่มวรรณยุกต์ปกติ ่ ้ ๊ ๋ ์
+    tone_marks = ['\u0e48', '\u0e49', '\u0e4a', '\u0e4b', '\u0e4c']
+    
+    # 1. วรรณยุกต์ที่ตามหลังสระบน (ต้องดันวรรณยุกต์ขึ้นไปอีกระดับ)
+    upper_vowels = ['\u0e31', '\u0e34', '\u0e35', '\u0e36', '\u0e37', '\u0e4d']
+    high_tone_marks = ['\uf713', '\uf714', '\uf715', '\uf716', '\uf717']
+    
+    for i, tone in enumerate(tone_marks):
+        for vowel in upper_vowels:
+            text = text.replace(vowel + tone, vowel + high_tone_marks[i])
+    
+    # 2. วรรณยุกต์ที่ตามหลัง ป ฝ ฟ (ต้องเลี้ยวซ้ายหลบหางพยัญชนะ)
+    tall_consonants = ['ป', 'ฝ', 'ฟ']
+    left_tone_marks = ['\uf70a', '\uf70b', '\uf70c', '\uf70d', '\uf70e']
+    
+    for i, tone in enumerate(tone_marks):
+        for cons in tall_consonants:
+            text = text.replace(cons + tone, cons + left_tone_marks[i])
+            
+    # 3. จัดการสระอำ (นิคหิต + สระอา)
+    text = text.replace('\u0e4d\u0e32', '\u0e33')
+    
+    return text
+
 def get_font(size):
     """โหลดฟอนต์จากไฟล์ที่ผู้ใช้อัปโหลด"""
     if 'font_bytes' in st.session_state and st.session_state.font_bytes:
@@ -48,6 +80,9 @@ def render_certificate(template_img, texts, row_data=None):
                 content = "ตัวอย่างข้อมูล"
         
         if not content: continue
+        
+        # === เรียกใช้ฟังก์ชันแก้สระภาษาไทยตรงนี้ ===
+        content = fix_thai_text(content)
             
         font = get_font(txt['size'])
         draw.text((txt['x'], txt['y']), content, fill=txt['color'], font=font, anchor="mm")
@@ -75,7 +110,7 @@ with st.sidebar:
     if template_file:
         st.session_state.template = Image.open(template_file)
 
-    # 2. Font (แก้ไขให้โหลดจากผู้ใช้)
+    # 2. Font 
     font_file = st.file_uploader("2. ฟอนต์ภาษาไทย (.ttf)", type=['ttf'])
     if font_file:
         st.session_state.font_bytes = font_file.getvalue()
@@ -92,7 +127,7 @@ with st.sidebar:
             st.session_state.data = pd.read_excel(data_file)
 
 if 'template' not in st.session_state:
-    st.info("👈 กรุณาอัปโหลด 'ต้นแบบเกียรติบัติ' ที่เมนูด้านซ้ายเพื่อเริ่มต้น")
+    st.info("👈 กรุณาอัปโหลด 'ต้นแบบเกียรติบัตร' ที่เมนูด้านซ้ายเพื่อเริ่มต้น")
     st.stop()
 
 # --- MAIN AREA ---
@@ -101,11 +136,11 @@ st.header("2️⃣ กำหนดตำแหน่ง ")
 col_img, col_form = st.columns([1.5, 1])
 
 with col_img:
-    st.markdown("**🖱️ คลิกลงบนรูปภาพเพื่อดึงพิกัด(คลิกบนรูป หรือ ระบุ X และ Y)")
+    st.markdown("**🖱️ คลิกลงบนรูปภาพเพื่อดึงพิกัด(คลิกบนรูป หรือ ระบุ X และ Y)**")
     
-    # คำนวณการย่อภาพ เพื่อไม่ให้ภาพใหญ่ล้นจอ
+    # คำนวณการย่อภาพ
     original_w, original_h = st.session_state.template.size
-    display_w = 700 # ความกว้างสูงสุดที่แสดงบนหน้าเว็บ (ปรับได้)
+    display_w = 700 
     
     if original_w > display_w:
         ratio = original_w / display_w
@@ -114,10 +149,8 @@ with col_img:
         ratio = 1.0
         display_img = st.session_state.template
 
-    # แสดงรูปภาพและจับพิกัดการคลิก
     coords = streamlit_image_coordinates(display_img, key="target_clicker")
     
-    # คำนวณพิกัดกลับไปเป็นขนาดรูปจริง
     if coords is not None:
         st.session_state.click_x = int(coords['x'] * ratio)
         st.session_state.click_y = int(coords['y'] * ratio)
@@ -137,15 +170,13 @@ with col_form:
                 st.warning("อัปโหลด Excel ก่อนครับ")
 
         c1, c2 = st.columns(2)
-        # ดึงพิกัดที่คลิกมาใส่ให้อัตโนมัติ
-        x_pos = c1.number_input("แกน X (คลิกรูปเพื่อเปลี่ยน)", value=st.session_state.click_x)
-        y_pos = c2.number_input("แกน Y (คลิกรูปเพื่อเปลี่ยน)", value=st.session_state.click_y)
+        x_pos = c1.number_input("แกน X", value=st.session_state.click_x)
+        y_pos = c2.number_input("แกน Y", value=st.session_state.click_y)
         
         f_size = st.slider("ขนาดฟอนต์", 10, 500, value=60)
         f_color = st.color_picker("เลือกสี", value="#000000")
         
         if st.form_submit_button("➕ แทรกข้อความลงเกียรติบัตร"):
-            # เช็คว่าผู้ใช้อัปโหลดฟอนต์หรือยัง ถ้ายังให้แจ้งเตือน
             if 'font_bytes' not in st.session_state:
                 st.warning("อัปโหลดฟอนต์เพื่อปรับขนาด(หากไม่ทำจะปรับขนาดไม่ได้)")
             
@@ -171,13 +202,11 @@ if st.session_state.texts:
             st.session_state.texts.pop(i)
             st.rerun()
 
-    # ดูตัวอย่างจาก Excel
     preview_row = None
     if 'data' in st.session_state:
         row_idx = st.number_input("ดูตัวอย่างแถวที่:", 0, max(0, len(st.session_state.data)-1), 0)
         preview_row = st.session_state.data.iloc[row_idx].to_dict()
     
-    # สร้างรูปพรีวิว (ย่อให้หน้ากว้าง 650px เพื่อไม่ให้ล้นจอ)
     preview_img = render_certificate(st.session_state.template, st.session_state.texts, preview_row)
     st.image(preview_img, width=650)
 else:
@@ -196,7 +225,6 @@ if 'data' in st.session_state and st.session_state.texts:
                 for idx, row in st.session_state.data.iterrows():
                     final_img = render_certificate(st.session_state.template, st.session_state.texts, row.to_dict())
                     img_io = BytesIO()
-                    # บันทึกภาพขนาดเต็ม!
                     final_img.save(img_io, format="PNG")
                     clean_name = sanitize_filename(row[filename_col])
                     zf.writestr(f"{clean_name}.png", img_io.getvalue())
