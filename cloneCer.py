@@ -85,8 +85,15 @@ def render_certificate(template_img, texts, row_data=None):
         # content = fix_thai_text(content)
             
         font = get_font(txt['size'])
-        draw.text((txt['x'], txt['y']), content, fill=txt['color'], font=font, anchor="la")
-    
+
+        # 1. ให้โปรแกรมวัดความกว้างของข้อความนั้นๆ ก่อน (หน่วยเป็นพิกเซล)
+        text_width = draw.textlength(content, font=font)
+
+        # 2. คำนวณหาจุด X ทางซ้ายสุด (เอาพิกัดแกน X ที่คลิกไว้ ลบด้วย ครึ่งหนึ่งของความกว้างข้อความ)
+        start_x = txt['x'] - (text_width / 2)
+
+        # 3. สั่งวาดข้อความ โดยเริ่มจากจุด start_x ที่คำนวณได้ และใช้ anchor="ls" (หรือ "la") เหมือนเดิม
+        draw.text((start_x, txt['y']), content, fill=txt['color'], font=font, anchor="ls")
     return img
 
 # ==========================================
