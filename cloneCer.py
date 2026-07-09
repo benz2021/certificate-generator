@@ -82,7 +82,7 @@ def render_certificate(template_img, texts, row_data=None):
         if not content: continue
         
         # === เรียกใช้ฟังก์ชันแก้สระภาษาไทยตรงนี้ ===
-        content = fix_thai_text(content)
+        # content = fix_thai_text(content)
             
         font = get_font(txt['size'])
         draw.text((txt['x'], txt['y']), content, fill=txt['color'], font=font, anchor="mm")
