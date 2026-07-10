@@ -66,8 +66,9 @@ def render_certificate(template_img, texts, row_data=None):
     img = template_img.copy()
     if img.mode != 'RGB':
         img = img.convert('RGB')
+
     draw = ImageDraw.Draw(img)
-    
+
     for txt in texts:
         if txt['type'] == 'static':
             content = txt['text']
@@ -77,29 +78,23 @@ def render_certificate(template_img, texts, row_data=None):
                 content = str(val) if pd.notna(val) else ""
             else:
                 content = "ตัวอย่างข้อมูล"
-        
+
         if not content: continue
-        
-        # --- จุดที่ต้องแก้ไข ---
-        # แก้สระภาษาไทยและวรรณยุกต์
-        content = fix_thai_text(content)
-        
-        # เพิ่มบรรทัดนี้: เรียกใช้ฟังก์ชันตัดฐาน ญ, ฐ เมื่อมีสระล่าง
-        content = fix_thai_baseless_chars(content) 
-        # ---------------------
-            
-        # ใช้ฟอนต์ที่บันทึกไว้สำหรับข้อความนี้โดยเฉพาะ
-        font = get_font(txt.get('font_name'), txt['size'])
 
-        # วัดขนาดและจัดกึ่งกลาง
-        try:
-            text_bbox = font.getbbox(content)
-            text_width = text_bbox[2] - text_bbox[0]
-        except:
-            text_width = draw.textlength(content, font=font)
+        # === เรียกใช้ฟังก์ชันแก้สระภาษาไทยตรงนี้ ===
+        # content = fix_thai_text(content)
 
-        # คำนวณจุดเริ่มต้น x
+        font = get_font(txt['size'])
+        draw.text((txt['x'], txt['y']), content, fill=txt['color'], font=font, anchor="la")
+    
+
+        # 1. ให้โปรแกรมวัดความกว้างของข้อความนั้นๆ ก่อน (หน่วยเป็นพิกเซล)
+        text_width = draw.textlength(content, font=font)
+
+        # 2. คำนวณหาจุด X ทางซ้ายสุด (เอาพิกัดแกน X ที่คลิกไว้ ลบด้วย ครึ่งหนึ่งของความกว้างข้อความ)
         start_x = txt['x'] - (text_width / 2)
+
+        # 3. สั่งวาดข้อความ โดยเริ่มจากจุด start_x ที่คำนวณได้ และใช้ anchor="ls" (หรือ "la") เหมือนเดิม
         draw.text((start_x, txt['y']), content, fill=txt['color'], font=font, anchor="ls")
     return img
 
