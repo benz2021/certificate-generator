@@ -66,7 +66,6 @@ def render_certificate(template_img, texts, row_data=None):
     img = template_img.copy()
     if img.mode != 'RGB':
         img = img.convert('RGB')
-    
     draw = ImageDraw.Draw(img)
     
     for txt in texts:
@@ -81,18 +80,26 @@ def render_certificate(template_img, texts, row_data=None):
         
         if not content: continue
         
-        # === เรียกใช้ฟังก์ชันแก้สระภาษาไทยตรงนี้ ===
-        # content = fix_thai_text(content)
+        # --- จุดที่ต้องแก้ไข ---
+        # แก้สระภาษาไทยและวรรณยุกต์
+        content = fix_thai_text(content)
+        
+        # เพิ่มบรรทัดนี้: เรียกใช้ฟังก์ชันตัดฐาน ญ, ฐ เมื่อมีสระล่าง
+        content = fix_thai_baseless_chars(content) 
+        # ---------------------
             
-        font = get_font(txt['size'])
+        # ใช้ฟอนต์ที่บันทึกไว้สำหรับข้อความนี้โดยเฉพาะ
+        font = get_font(txt.get('font_name'), txt['size'])
 
-        # 1. ให้โปรแกรมวัดความกว้างของข้อความนั้นๆ ก่อน (หน่วยเป็นพิกเซล)
-        text_width = draw.textlength(content, font=font)
+        # วัดขนาดและจัดกึ่งกลาง
+        try:
+            text_bbox = font.getbbox(content)
+            text_width = text_bbox[2] - text_bbox[0]
+        except:
+            text_width = draw.textlength(content, font=font)
 
-        # 2. คำนวณหาจุด X ทางซ้ายสุด (เอาพิกัดแกน X ที่คลิกไว้ ลบด้วย ครึ่งหนึ่งของความกว้างข้อความ)
+        # คำนวณจุดเริ่มต้น x
         start_x = txt['x'] - (text_width / 2)
-
-        # 3. สั่งวาดข้อความ โดยเริ่มจากจุด start_x ที่คำนวณได้ และใช้ anchor="ls" (หรือ "la") เหมือนเดิม
         draw.text((start_x, txt['y']), content, fill=txt['color'], font=font, anchor="ls")
     return img
 
